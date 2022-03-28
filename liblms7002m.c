@@ -1305,7 +1305,6 @@ static int lms7_rbb_set_lpfx_bandwidth(struct lms7_state* st, unsigned bw)
 	return lms7_rbb_set_path(st, path);
 }
 
-
 int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw)
 {
 	int res;
@@ -1314,14 +1313,16 @@ int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw)
 	if((st->c_ctl_lpfh_rbb < 0)
 		|| (st->c_ctl_lpfl_rbb < 0))
 	{
-		lms7_log(st,"RBB: Calibration was failed Apply default method");	if (bw < 100000)
-		bw = 100000;
+		lms7_log(st,"RBB: Calibration was failed Apply default method");
+		if (bw < 100000)
+			bw = 100000;
 
 		int cfb_tia_rfe = (int)(1680000000U/bw - 10);
 		int ccomp_tia_rfe = cfb_tia_rfe/100;
 
 		if (ccomp_tia_rfe > 15)
 			ccomp_tia_rfe = 15;
+
 		if (cfb_tia_rfe < 0)
 			cfb_tia_rfe = 0;
 		else if (cfb_tia_rfe > 4095)
@@ -1352,7 +1353,6 @@ int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw)
 	lms7_rbb_apply_calibration(st,path);
 	return 0;
 }
-
 
 int lms7_rbb_set_pga(struct lms7_state* st, unsigned gain)
 {
