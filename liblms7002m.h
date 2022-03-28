@@ -26,6 +26,307 @@
 #include <unistd.h>
 #endif
 
+#define MUX_BIAS_OUT			0x0084,12 << 4 | 11
+#define RP_CALIB_BIAS			0x0084,10 << 4 | 6
+#define PD_FRP_BIAS				0x0084,4 << 4 | 4
+#define PD_F_BIAS				0x0084,3 << 4 | 3
+#define PD_PTRP_BIAS			0x0084,2 << 4 | 2
+#define PD_PT_BIAS				0x0084,1 << 4 | 1
+#define PD_BIAS_MASTER			0x0084,0 << 4 | 0
+
+#define EN_LOWBWLOMX_TMX_TRF	0x0100,15 << 4 | 15
+#define EN_NEXTTX_TRF			0x0100,14 << 4 | 14
+#define EN_AMPHF_PDET_TRF		0x0100,13 << 4 | 12
+#define LOADR_PDET_TRF			0x0100,11 << 4 | 10
+#define PD_PDET_TRF				0x0100,3 << 4 | 3
+#define PD_TLOBUF_TRF			0x0100,2 << 4 | 2
+#define PD_TXPAD_TRF			0x0100,1 << 4 | 1
+#define EN_G_TRF				0x0100,0 << 4 | 0
+
+#define F_TXPAD_TRF				0x0101,15 << 4 | 13
+#define L_LOOPB_TXPAD_TRF		0x0101,12 << 4 | 11
+#define LOSS_LIN_TXPAD_TRF		0x0101,10 << 4 | 6
+#define LOSS_MAIN_TXPAD_TRF		0x0101,5 << 4 | 1
+#define EN_LOOPB_TXPAD_TRF		0x0101,0 << 4 | 0
+
+#define SEL_BAND1_TRF			0x0103,11 << 4 | 11
+#define SEL_BAND2_TRF			0x0103,10 << 4 | 10
+#define LOBIASN_TXM_TRF			0x0103,9 << 4 | 5
+#define LOBIASP_TXX_TRF			0x0103,4 << 4 | 0
+
+#define STATPULSE_TBB			0x0105,15 << 4 | 15
+#define LOOPB_TBB				0x0105,14 << 4 | 12
+#define PD_LPFH_TBB				0x0105,4 << 4 | 4
+#define PD_LPFIAMP_TBB			0x0105,3 << 4 | 3
+#define PD_LPFLAD_TBB			0x0105,2 << 4 | 2
+#define PD_LPFS5_TBB			0x0105,1 << 4 | 1
+#define EN_G_TBB				0x0105,0 << 4 | 0
+
+#define CG_IAMP_TBB				0x0108,15 << 4 | 10
+#define ICT_IAMP_FRP_TBB		0x0108,9 << 4 | 5
+#define ICT_IAMP_GG_FRP_TBB		0x0108,4 << 4 | 0
+
+#define RCAL_LPFH_TBB			0x0109,15 << 4 | 8
+#define RCAL_LPFLAD_TBB			0x0109,7 << 4 | 0
+
+#define TSTIN_TBB				0x010A,15 << 4 | 14
+#define BYPLADDER_TBB			0x010A,13 << 4 | 13
+#define CCAL_LPFLAD_TBB			0x010A,12 << 4 | 8
+#define RCAL_LPFS5_TBB			0x010A,7 << 4 | 0
+
+#define CDC_I_RFE				0x010C,15 << 4 | 12
+#define CDC_Q_RFE				0x010C,11 << 4 | 8
+#define PD_LNA_RFE				0x010C,7 << 4 | 7
+#define PD_RLOOPB_1_RFE			0x010C,6 << 4 | 6
+#define PD_RLOOPB_2_RFE			0x010C,5 << 4 | 5
+#define PD_MXLOBUF_RFE			0x010C,4 << 4 | 4
+#define PD_QGEN_RFE				0x010C,3 << 4 | 3
+#define PD_RSSI_RFE				0x010C,2 << 4 | 2
+#define PD_TIA_RFE				0x010C,1 << 4 | 1
+#define EN_G_RFE				0x010C,0 << 4 | 0
+
+#define SEL_PATH_RFE			0x010D,8 << 4 | 7
+#define EN_DCOFF_RXFE_RFE		0x010D,6 << 4 | 6
+#define EN_INSHSW_LB1_RFE		0x010D,4 << 4 | 4
+#define EN_INSHSW_LB2_RFE		0x010D,3 << 4 | 3
+#define EN_INSHSW_L_RFE			0x010D,2 << 4 | 2
+#define EN_INSHSW_W_RFE			0x010D,1 << 4 | 1
+#define EN_NEXTRX_RFE			0x010D,0 << 4 | 0
+
+#define ICT_LOOPB_RFE			0x010F,14 << 4 | 10
+#define ICT_TIAMAIN_RFE			0x010F,9 << 4 | 5
+#define ICT_TIAOUT_RFE			0x010F,4 << 4 | 0
+
+#define CCOMP_TIA_RFE			0x0112,15 << 4 | 12
+#define CFB_TIA_RFE				0x0112,11 << 4 | 0
+
+#define G_LNA_RFE				0x0113,9 << 4 | 6
+#define G_RXLOOPB_RFE			0x0113,5 << 4 | 2
+#define G_TIA_RFE				0x0113,1 << 4 | 0
+
+#define RCOMP_TIA_RFE			0x0114,8 << 4 | 5
+#define RFB_TIA_RFE				0x0114,4 << 4 | 0
+
+#define EN_LB_LPFH_RBB			0x0115,15 << 4 | 15
+#define EN_LB_LPFL_RBB			0x0115,14 << 4 | 14
+#define PD_LPFH_RBB				0x0115,3 << 4 | 3
+#define PD_LPFL_RBB				0x0115,2 << 4 | 2
+#define PD_PGA_RBB				0x0115,1 << 4 | 1
+#define EN_G_RBB				0x0115,0 << 4 | 0
+
+#define R_CTL_LPF_RBB			0x0116,15 << 4 | 11
+#define RCC_CTL_LPFH_RBB		0x0116,10 << 4 | 8
+#define C_CTL_LPFH_RBB			0x0116,7 << 4 | 0
+
+#define RCC_CTL_LPFL_RBB		0x0117,13 << 4 | 11
+#define C_CTL_LPFL_RBB			0x0117,10 << 4 | 0
+
+#define INPUT_CTL_PGA_RBB		0x0118,15 << 4 | 13
+#define ICT_LPF_IN_RBB			0x0118,9 << 4 | 5
+#define ICT_LPF_OUT_RBB			0x0118,4 << 4 | 0
+
+#define OSW_PGA_RBB				0x0119,15 << 4 | 15
+#define ICT_PGA_OUT_RBB			0x0119,14 << 4 | 10
+#define ICT_PGA_IN_RBB			0x0119,9 << 4 | 5
+#define G_PGA_RBB				0x0119,4 << 4 | 0
+
+#define RCC_CTL_PGA_RBB			0x011A,13 << 4 | 9
+#define C_CTL_PGA_RBB			0x011A,6 << 4 | 0
+
+#define TSGFC_TXTSP				0x0200,9 << 4 | 9
+#define TSGFCW_TXTSP			0x0200,8 << 4 | 7
+#define TSGDCLDQ_TXTSP			0x0200,6 << 4 | 6
+#define TSGDCLDI_TXTSP			0x0200,5 << 4 | 5
+#define TSGSWAPIQ_TXTSP			0x0200,4 << 4 | 4
+#define TSGMODE_TXTSP			0x0200,3 << 4 | 3
+#define INSEL_TXTSP				0x0200,2 << 4 | 2
+#define BSTART_TXTSP			0x0200,1 << 4 | 1
+#define EN_TXTSP				0x0200,0 << 4 | 0
+
+#define CMIX_GAIN_TXTSP			0x0208,15 << 4 | 14
+#define CMIX_GAIN_TXTSP_R3		0x0208,12 << 4 | 12
+#define CMIX_SC_TXTSP			0x0208,13 << 4 | 13
+#define CMIX_BYP_TXTSP			0x0208,8 << 4 | 8
+#define ISINC_BYP_TXTSP			0x0208,7 << 4 | 7
+#define GFIR3_BYP_TXTSP			0x0208,6 << 4 | 6
+#define GFIR2_BYP_TXTSP			0x0208,5 << 4 | 5
+#define GFIR1_BYP_TXTSP			0x0208,4 << 4 | 4
+#define DC_BYP_TXTSP			0x0208,3 << 4 | 3
+#define GC_BYP_TXTSP			0x0208,1 << 4 | 1
+#define PH_BYP_TXTSP			0x0208,0 << 4 | 0
+
+#define DC_REG_TXTSP			0x020C,15 << 4 | 0
+
+#define AGC_MODE_RXTSP			0x040A,13 << 4 | 12
+#define AGC_AVG_RXTSP			0x040A,2 << 4 | 0
+
+#define CMIX_GAIN_RXTSP			0x040C,15 << 4 | 14
+#define CMIX_SC_RXTSP			0x040C,13 << 4 | 13
+#define CMIX_GAIN_RXTSP_R3		0x040C,12 << 4 | 12
+#define CMIX_BYP_RXTSP			0x040C,7 << 4 | 7
+#define AGC_BYP_RXTSP			0x040C,6 << 4 | 6
+#define GFIR3_BYP_RXTSP			0x040C,5 << 4 | 5
+#define GFIR2_BYP_RXTSP			0x040C,4 << 4 | 4
+#define GFIR1_BYP_RXTSP			0x040C,3 << 4 | 3
+#define DC_BYP_RXTSP			0x040C,2 << 4 | 2
+#define GC_BYP_RXTSP			0x040C,1 << 4 | 1
+#define PH_BYP_RXTSP			0x040C,0 << 4 | 0
+
+static inline int lms7_regs_default(uint16_t addr)
+{
+	if(addr == 0x0020) return(0xffff);
+	if(addr == 0x0021) return(0xe9f);
+	if(addr == 0x0022) return(0x7df);
+	if(addr == 0x0023) return(0x5559);
+	if(addr == 0x0024) return(0xe4e4);
+	if(addr == 0x0025) return(0x101);
+	if(addr == 0x0026) return(0x101);
+	if(addr == 0x0027) return(0xe4e4);
+	if(addr == 0x0028) return(0x101);
+	if(addr == 0x0029) return(0x101);
+	if(addr == 0x002A) return(0x86);
+	if(addr == 0x002B) return(0x10);
+	if(addr == 0x002C) return(0xffff);
+	if(addr == 0x002E) return(0x0);
+	if(addr == 0x002F) return(0x3840);
+	if(addr == 0x0081) return(0x0);
+	if(addr == 0x0082) return(0x800b);
+	if(addr == 0x0084) return(0x400);
+	if(addr == 0x0085) return(0x1);
+	if(addr == 0x0086) return(0x4901);
+	if(addr == 0x0087) return(0x400);
+	if(addr == 0x0088) return(0x780);
+	if(addr == 0x0089) return(0x20);
+	if(addr == 0x008A) return(0x514);
+	if(addr == 0x008B) return(0x2100);
+	if(addr == 0x008C) return(0x67b);
+	if(addr == 0x008D) return(0x0);
+	if(addr == 0x0092) return(0x1);
+	if(addr == 0x0093) return(0x0);
+	if(addr == 0x0094) return(0x0);
+	if(addr == 0x0095) return(0x0);
+	if(addr == 0x0096) return(0x0);
+	if(addr == 0x0097) return(0x0);
+	if(addr == 0x0098) return(0x0);
+	if(addr == 0x0099) return(0x6565);
+	if(addr == 0x009A) return(0x658c);
+	if(addr == 0x009B) return(0x6565);
+	if(addr == 0x009C) return(0x658c);
+	if(addr == 0x009D) return(0x6565);
+	if(addr == 0x009E) return(0x658c);
+	if(addr == 0x009F) return(0x658c);
+	if(addr == 0x00A0) return(0x6565);
+	if(addr == 0x00A1) return(0x6565);
+	if(addr == 0x00A2) return(0x6565);
+	if(addr == 0x00A3) return(0x6565);
+	if(addr == 0x00A4) return(0x6565);
+	if(addr == 0x00A5) return(0x6565);
+	if(addr == 0x00A6) return(0xf);
+	if(addr == 0x00A7) return(0x6565);
+	if(addr == 0x00a8) return(0x0);
+	if(addr == 0x00aa) return(0x0);
+	if(addr == 0x00ab) return(0x0);
+	if(addr == 0x00ad) return(0x3ff);
+	if(addr == 0x00ae) return(0xf000);
+	if(addr == 0x0100) return(0x3409);
+	if(addr == 0x0101) return(0x7800);
+	if(addr == 0x0102) return(0x3180);
+	if(addr == 0x0103) return(0xa12);
+	if(addr == 0x0104) return(0x88);
+	if(addr == 0x0105) return(0x7);
+	if(addr == 0x0106) return(0x318c);
+	if(addr == 0x0107) return(0x318c);
+	if(addr == 0x0108) return(0x9426);
+	if(addr == 0x0109) return(0x61c1);
+	if(addr == 0x010A) return(0x104c);
+	if(addr == 0x010B) return(0x0);
+	if(addr == 0x010C) return(0x88fd);
+	if(addr == 0x010D) return(0x9e);
+	if(addr == 0x010E) return(0x2040);
+	if(addr == 0x010F) return(0x3042);
+	if(addr == 0x0110) return(0xbf4);
+	if(addr == 0x0111) return(0x83);
+	if(addr == 0x0112) return(0xc0e6);
+	if(addr == 0x0113) return(0x3c3);
+	if(addr == 0x0114) return(0x8d);
+	if(addr == 0x0115) return(0x9);
+	if(addr == 0x0116) return(0x8180);
+	if(addr == 0x0117) return(0x280c);
+	if(addr == 0x0118) return(0x18c);
+	if(addr == 0x0119) return(0x18cb);
+	if(addr == 0x011A) return(0x2e02);
+	if(addr == 0x011B) return(0x0);
+	if(addr == 0x011C) return(0xad43);
+	if(addr == 0x011D) return(0x400);
+	if(addr == 0x011E) return(0x780);
+	if(addr == 0x011F) return(0x3640);
+	if(addr == 0x0120) return(0xb9ff);
+	if(addr == 0x0121) return(0x3404);
+	if(addr == 0x0122) return(0x33f);
+	if(addr == 0x0123) return(0x67b);
+	if(addr == 0x0124) return(0x0);
+	if(addr == 0x0125) return(0x9400);
+	if(addr == 0x0126) return(0x12ff);
+	if(addr == 0x0200) return(0x81);
+	if(addr == 0x0201) return(0x7ff);
+	if(addr == 0x0202) return(0x7ff);
+	if(addr == 0x0203) return(0x0);
+	if(addr == 0x0204) return(0x0);
+	if(addr == 0x0205) return(0x0);
+	if(addr == 0x0206) return(0x0);
+	if(addr == 0x0207) return(0x0);
+	if(addr == 0x0208) return(0x0);
+	if(addr == 0x0209) return(0x0);
+	if(addr == 0x020a) return(0x0);
+	if(addr == 0x020C) return(0x0);
+	if(addr == 0x0240) return(0x20);
+	if(addr == 0x0241) return(0x0);
+	if(addr == 0x0242) return(0x0);
+	if(addr == 0x0243) return(0x0);
+	if(addr == 0x0400) return(0x81);
+	if(addr == 0x0401) return(0x7ff);
+	if(addr == 0x0402) return(0x7ff);
+	if(addr == 0x0403) return(0x0);
+	if(addr == 0x0404) return(0x0);
+	if(addr == 0x0405) return(0x0);
+	if(addr == 0x0406) return(0x0);
+	if(addr == 0x0407) return(0x0);
+	if(addr == 0x0408) return(0x0);
+	if(addr == 0x0409) return(0x0);
+	if(addr == 0x040A) return(0x0);
+	if(addr == 0x040B) return(0x0);
+	if(addr == 0x040C) return(0x0);
+	if(addr == 0x040e) return(0x0);
+	if(addr == 0x0440) return(0x20);
+	if(addr == 0x0441) return(0x0);
+	if(addr == 0x0442) return(0x0);
+	if(addr == 0x0443) return(0x0);
+	if(addr == 0x05c0) return(0x0);
+	if(addr == 0x05c1) return(0x0);
+	if(addr == 0x05c2) return(0x0);
+	if(addr == 0x05c3) return(0x0);
+	if(addr == 0x05c4) return(0x0);
+	if(addr == 0x05c5) return(0x0);
+	if(addr == 0x05c6) return(0x0);
+	if(addr == 0x05c7) return(0x0);
+	if(addr == 0x05c8) return(0x0);
+	if(addr == 0x05c9) return(0x0);
+	if(addr == 0x05ca) return(0x0);
+	if(addr == 0x05cb) return(0x0);
+	if(addr == 0x05cc) return(0x0);
+	if(addr == 0x0600) return(0xf00);
+	if(addr == 0x0601) return(0x0);
+	if(addr == 0x0602) return(0x2000);
+	if(addr == 0x0603) return(0x0);
+	if(addr == 0x0604) return(0x0);
+	if(addr == 0x0605) return(0x0);
+	if(addr == 0x0606) return(0x0);
+	if(addr == 0x0640) return(0xa0);
+	if(addr == 0x0641) return(0x1020);
+
+	return(-1);
+}
+
 enum lms7_error_codes {
 	LMSE_OK = 0,
 	LMSE_OUT_OF_RANGE = 1,
@@ -44,6 +345,12 @@ enum lms7_mac_mode {
 	LMS7_CH_AB = LMS7_CH_A | LMS7_CH_B,
 };
 
+//! direction constants
+enum lms7_dir_t {
+	LMS7_TX = 1,
+	LMS7_RX = 2,
+};
+
 // State of xtsp block
 struct lms7_tsp_state {
 	uint16_t reg_0x0c;
@@ -57,6 +364,30 @@ struct lms7_filters_state {
 struct lms7_state {
 	// Global parameters
 	uint32_t fref;
+
+	// for calibration
+	int rcal_lpflad_tbb;	// 0x0109
+	int rcal_lpfh_tbb;		// 0x0109
+	int ccal_lpflad_tbb;	// 0x010A
+	int rcal_lpfs5_tbb;		// 0x010A
+	int cg_iamp_tbb;		// 0x0108
+	int g_pga_rbb;			// 0x0108
+
+	int cfb_tia_rfe;		// 0x0112
+	int ccomp_tia_rfe;		// 0x0112
+	int rcomp_tia_rfe;		// 0x0114
+	int rcc_ctl_lpfl_rbb;	// 0x0117
+	int c_ctl_lpfl_rbb;
+	int rcc_ctl_lpfh_rbb;	// 0x0116
+	int c_ctl_lpfh_rbb;		// 0x0116
+
+	double cgen_freq;		// last written CGEN frequency in Hz
+
+	double sxr_freq;		// last written RX frequency in Hz
+	double sxt_freq;		// last written TX frequency in Hz
+	unsigned txdiv;
+
+	uint32_t saved_regs[2][200];
 
 	// Frequent registers cache
 	uint16_t reg_0x0020;
