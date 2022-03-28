@@ -595,4 +595,18 @@ enum {
 
 int lms7_cal_rxdc(struct lms7_state* st);
 
+/* for calibration */
+#ifdef UNUSED
+uint16_t lms7_get_spi_bits(struct lms7_state *st,uint16_t address,uint8_t msb,uint8_t lsb);
+int lms7_set_spi_modify_bits(struct lms7_state *st,uint16_t address,uint8_t msb,uint8_t lsb,uint16_t value);
+#endif
+int lms7_modify_spi_reg_bits(struct lms7_state *st,uint16_t addr,uint8_t bits,uint16_t new_bits_data);
+uint16_t lms7_get_spi_reg_bits(struct lms7_state *st,uint16_t addr,uint8_t bits);
+void lms7_store_register(struct lms7_state *st);
+void lms7_restore_register(struct lms7_state *st);
+int lms7_tbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double bw);
+void lms7_tbb_apply_calibration(struct lms7_state *st,int path);
+int lms7_rbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double bw);
+void lms7_rbb_apply_calibration(struct lms7_state *st,int path);
+
 #endif //LIBLMS7002MC_H
