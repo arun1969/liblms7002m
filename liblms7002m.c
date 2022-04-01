@@ -134,12 +134,10 @@ int lms7_enable(struct lms7_state* st)
 	if (GET_LMS7002_LML_REV(ver) != 1)
 		return -1;
 
-	//st->xbbst.rbb0_path =
-	//st->xbbst.rbb0_path =
-
 	st->reg_0x0124[0] = 0;
 	st->reg_0x0124[1] = 0;
-
+	st->cbst[0].rfe_tia_g = 3;
+	st->cbst[1].rfe_tia_g = 3;
 	return 0;
 }
 
@@ -775,7 +773,7 @@ int lms7_rfe_disable(struct lms7_state* st)
 
 int lms7_rfe_set_path(struct lms7_state* st, enum rfe_path p, bool rfea_en, bool rfeb_en)
 {
-	unsigned path = (p == RFE_LNAH) ? LMS7002_OPT_SEL_PATH_RFE_LNAH :
+	unsigned path = (p == RFE_LNAH || p == RFE_LBH) ? LMS7002_OPT_SEL_PATH_RFE_LNAH :
 					(p == RFE_LNAL || p == RFE_LBL) ? LMS7002_OPT_SEL_PATH_RFE_LNAL :
 					(p == RFE_LNAW || p == RFE_LBW) ? LMS7002_OPT_SEL_PATH_RFE_LNAW :
 													  LMS7002_OPT_SEL_PATH_RFE_NONE;
@@ -836,7 +834,7 @@ int lms7_rfe_set_path(struct lms7_state* st, enum rfe_path p, bool rfea_en, bool
 		MAKE_LMS7002_0x010C( 8, //CDC_I_RFE,
 							 8, //CDC_Q_RFE,
 							 rfea_en && (p == RFE_LNAH || p == RFE_LNAW || p == RFE_LNAL) ? 0u : 1u, // PD_LNA_RFE,
-							 rfea_en && (p == RFE_LBW) ? 0u : 1u, // PD_RLOOPB_1_RFE,
+							 rfea_en && (p == RFE_LBW || p == RFE_LBH) ? 0u : 1u, // PD_RLOOPB_1_RFE,
 							 rfea_en && (p == RFE_LBL) ? 0u : 1u, // PD_RLOOPB_2_RFE,
 							 (rfea_en) ? 0 : 1u, // PD_MXLOBUF_RFE,
 							 (rfea_en) ? 0 : 1u, // PD_QGEN_RFE,
@@ -846,12 +844,13 @@ int lms7_rfe_set_path(struct lms7_state* st, enum rfe_path p, bool rfea_en, bool
 		),
 		MAKE_LMS7002_0x010D( path, // SEL_PATH_RFE,
 							 1, //EN_DCOFF_RXFE_RFE,
-							 !rfea_en || (p == RFE_LBW) ? 0u : 1u, // EN_INSHSW_LB1_RFE,
+							 !rfea_en || (p == RFE_LBW || p == RFE_LBH) ? 0u : 1u, // EN_INSHSW_LB1_RFE,
 							 !rfea_en || (p == RFE_LBL) ? 0u : 1u, // EN_INSHSW_LB2_RFE,
 							 !rfea_en || (p == RFE_LNAL) ? 0u : 1u, // EN_INSHSW_L_RFE,
 							 !rfea_en || (p == RFE_LNAW) ? 0u : 1u, // EN_INSHSW_W_RFE,
 							 rfeb_en ? 1u : 0 //EN_NEXTRX_RFE
 		),
+		MAKE_LMS7002_0x010F((p == RFE_LBW || p == RFE_LBH || p == RFE_LBL) ? 3 : 0, 2, 2),
 		MAKE_WR_REG(LMS7002M_0x0020, st->reg_0x0020),
 
 		// Channel B
@@ -859,7 +858,7 @@ int lms7_rfe_set_path(struct lms7_state* st, enum rfe_path p, bool rfea_en, bool
 		MAKE_LMS7002_0x010C( 8, //CDC_I_RFE,
 							 8, //CDC_Q_RFE,
 							 (p == RFE_LNAH || p == RFE_LNAW || p == RFE_LNAL) ? 0u : 1u, // PD_LNA_RFE,
-							 (p == RFE_LBW) ? 0u : 1u, // PD_RLOOPB_1_RFE,
+							 (p == RFE_LBW || p == RFE_LBH) ? 0u : 1u, // PD_RLOOPB_1_RFE,
 							 (p == RFE_LBL) ? 0u : 1u, // PD_RLOOPB_2_RFE,
 							 0, // PD_MXLOBUF_RFE,
 							 0, // PD_QGEN_RFE,
@@ -869,12 +868,13 @@ int lms7_rfe_set_path(struct lms7_state* st, enum rfe_path p, bool rfea_en, bool
 		),
 		MAKE_LMS7002_0x010D( path, // SEL_PATH_RFE,
 							 1, //EN_DCOFF_RXFE_RFE,
-							 (p == RFE_LBW) ? 0u : 1u, // EN_INSHSW_LB1_RFE,
+							 (p == RFE_LBW || p == RFE_LBH) ? 0u : 1u, // EN_INSHSW_LB1_RFE,
 							 (p == RFE_LBL) ? 0u : 1u, // EN_INSHSW_LB2_RFE,
 							 (p == RFE_LNAL) ? 0u : 1u, // EN_INSHSW_L_RFE,
 							 (p == RFE_LNAW) ? 0u : 1u, // EN_INSHSW_W_RFE,
 							 0 //EN_NEXTRX_RFE
 		),
+		MAKE_LMS7002_0x010F((p == RFE_LBW || p == RFE_LBH || p == RFE_LBL) ? 3 : 0, 2, 2),
 		MAKE_WR_REG(LMS7002M_0x0020, st->reg_0x0020),
 	};
 
@@ -899,6 +899,28 @@ static unsigned _lowerbound(uint8_t* a, uint8_t v, unsigned sz)
 	return i;
 }
 
+static int _lms7_rfe_update_gains(struct lms7_state* st)
+{
+	unsigned mimo = ((GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHAB) == LMS7002_OPT_MAC_CHAB);
+	unsigned chb = ((GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHAB) == LMS7002_OPT_MAC_CHB);
+
+	uint32_t regs[] = {
+		// Channel A
+		MAKE_WR_REG(LMS7002M_0x0020, (st->reg_0x0020 & ~0x3u) | LMS7002_OPT_MAC_CHA),
+		MAKE_LMS7002_0x0113(st->cbst[0].rfe_lna_g, 0, st->cbst[0].rfe_tia_g),
+		MAKE_WR_REG(LMS7002M_0x0020, st->reg_0x0020),
+
+		// Channel B
+		MAKE_WR_REG(LMS7002M_0x0020, (st->reg_0x0020 & ~0x3u) | LMS7002_OPT_MAC_CHB),
+		MAKE_LMS7002_0x0113(st->cbst[1].rfe_lna_g, 0, st->cbst[1].rfe_tia_g),
+		MAKE_WR_REG(LMS7002M_0x0020, st->reg_0x0020),
+	};
+
+	return lms7_spi_post(st,
+						 (mimo) ? REG_COUNT(regs) : (REG_COUNT(regs)/2),
+						 (chb) ? regs + (REG_COUNT(regs)/2) : regs);
+}
+
 int lms7_rfe_set_lna(struct lms7_state* st, unsigned atten, unsigned *paout)
 {
 	uint8_t attens[] = {
@@ -911,10 +933,36 @@ int lms7_rfe_set_lna(struct lms7_state* st, unsigned atten, unsigned *paout)
 
 	lms7_log(st, "RFE: set_lna(%d -> %d) => %d", atten, attens[i], i);
 
-	uint32_t regs[] = {
-		MAKE_LMS7002_0x0113(i, 0, 3 /* TIA !!!!!!!!!!!!!!!!!!!!!!!!! */)
+	if (GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHA) {
+		st->cbst[0].rfe_lna_g = i;
+	}
+	if (GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHB) {
+		st->cbst[1].rfe_lna_g = i;
+	}
+
+	return _lms7_rfe_update_gains(st);
+}
+
+int lms7_rfe_set_tia(struct lms7_state* st, unsigned atten, unsigned *paout)
+{
+	const uint8_t attens[] = {
+		255, 12, 3, 0
 	};
-	return lms7_spi_post(st, REG_COUNT(regs), regs);
+	unsigned i = _lowerbound(attens, atten, REG_COUNT(attens));
+	if (paout) {
+		*paout = attens[i];
+	}
+
+	lms7_log(st, "RFE: set_tia(%d -> %d) => %d", atten, attens[i], i);
+
+	if (GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHA) {
+		st->cbst[0].rfe_tia_g = i;
+	}
+	if (GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHB) {
+		st->cbst[1].rfe_tia_g = i;
+	}
+
+	return _lms7_rfe_update_gains(st);
 }
 
 int lms7_rfe_set_lblna(struct lms7_state* st, unsigned attenx4, unsigned *paout)
@@ -929,10 +977,24 @@ int lms7_rfe_set_lblna(struct lms7_state* st, unsigned attenx4, unsigned *paout)
 
 	lms7_log(st, "RFE: set_lblna(%d -> %d) => %d", attenx4, attens[i], i);
 
+	unsigned mimo = ((GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHAB) == LMS7002_OPT_MAC_CHAB);
+	unsigned chb = ((GET_LMS7002_LML_MAC(st->reg_0x0020) & LMS7002_OPT_MAC_CHAB) == LMS7002_OPT_MAC_CHB);
+
 	uint32_t regs[] = {
-		MAKE_LMS7002_0x0113(1, i, 3 /* TIA !!!!!!!!!!!!!!!!!!!!!!!!! */)
+		// Channel A
+		MAKE_WR_REG(LMS7002M_0x0020, (st->reg_0x0020 & ~0x3u) | LMS7002_OPT_MAC_CHA),
+		MAKE_LMS7002_0x0113(1, i, st->cbst[0].rfe_tia_g),
+		MAKE_WR_REG(LMS7002M_0x0020, st->reg_0x0020),
+
+		// Channel B
+		MAKE_WR_REG(LMS7002M_0x0020, (st->reg_0x0020 & ~0x3u) | LMS7002_OPT_MAC_CHB),
+		MAKE_LMS7002_0x0113(1, i, st->cbst[1].rfe_tia_g),
+		MAKE_WR_REG(LMS7002M_0x0020, st->reg_0x0020),
 	};
-	return lms7_spi_post(st, REG_COUNT(regs), regs);
+
+	return lms7_spi_post(st,
+						 (mimo) ? REG_COUNT(regs) : (REG_COUNT(regs)/2),
+						 (chb) ? regs + (REG_COUNT(regs)/2) : regs);
 }
 
 /************************************************************************
@@ -975,7 +1037,7 @@ int lms7_trf_enable(struct lms7_state* st, bool cha, bool chb)
 		MAKE_WR_REG(LMS7002M_0x0020, (st->reg_0x0020 & ~0x3u) | LMS7002_OPT_MAC_CHA),
 		MAKE_LMS7002_0x0100(
 			0, //EN_LOWBWLOMX_TMX_TRF,
-			(cha || chb) ? 1u : 0, //EN_NEXTTX_TRF,
+			(chb /*|| cha*/) ? 1u : 0, //EN_NEXTTX_TRF,
 			3, //EN_AMPHF_PDET_TRF,
 			1, //LOADR_PDET_TRF,
 			1, //PD_PDET_TRF,
@@ -1013,7 +1075,7 @@ int lms7_trf_set_pad(struct lms7_state* st, unsigned atten)
 			3,     //L_LOOPB_TXPAD_TRF,
 			atten, //LOSS_LIN_TXPAD_TRF,
 			atten, //LOSS_MAIN_TXPAD_TRF,
-			1u     //EN_LOOPB_TXPAD_TRF
+			0u     //EN_LOOPB_TXPAD_TRF
 		),
 	};
 	return lms7_spi_post(st, REG_COUNT(regs), regs);
@@ -1032,6 +1094,27 @@ int lms7_trf_set_path(struct lms7_state* st, unsigned band)
 	return lms7_spi_post(st, REG_COUNT(regs), regs);
 }
 
+int lms7_trf_set_padlb(struct lms7_state* st, unsigned atten, unsigned lbloss)
+{
+	if (atten > 52)
+		atten = 31;
+	else if (atten > 10)
+		atten = (atten + 10) / 2;
+
+	if (lbloss > 3)
+		lbloss = 3;
+
+	uint32_t regs[] = {
+		MAKE_LMS7002_0x0101(
+			3,     //F_TXPAD_TRF,
+			lbloss,     //L_LOOPB_TXPAD_TRF,
+			atten, //LOSS_LIN_TXPAD_TRF,
+			atten, //LOSS_MAIN_TXPAD_TRF,
+			1u     //EN_LOOPB_TXPAD_TRF
+		),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
 
 /************************************************************************
  * TBB configuration
@@ -1336,7 +1419,7 @@ int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw)
 				ccomp_tia_rfe, cfb_tia_rfe, rcomp_tia_rfe);
 
 		uint32_t regs[] = {
-			MAKE_LMS7002_0x010F(0, 2, 2),
+		//	MAKE_LMS7002_0x010F(0, 2, 2),
 			MAKE_LMS7002_0x0112(ccomp_tia_rfe, //CCOMP_TIA_RFE,
 								cfb_tia_rfe), //CFB_TIA_RFE),
 			MAKE_LMS7002_0x0114(rcomp_tia_rfe, //RCOMP_TIA_RFE,
@@ -1476,10 +1559,11 @@ int lms7_rxtsp_disable(struct lms7_state* st)
 int lms7_rxtsp_init(struct lms7_state* st, unsigned decim_ord)
 {
 	st->rxtsp.reg_0x0c = (uint16_t)MAKE_LMS7002_0x040C(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+	st->rxtsp.reg_0x03 = (uint16_t)MAKE_LMS7002_0x0403( (unsigned)(decim_ord - 1), 0);
 
 	uint32_t regs[] = {
 		MAKE_WR_REG(LMS7002M_0x040C, st->rxtsp.reg_0x0c),
-		MAKE_LMS7002_0x0403( (unsigned)(decim_ord - 1), 0),
+		MAKE_WR_REG(LMS7002M_0x0403, st->rxtsp.reg_0x03),
 		MAKE_LMS7002_0x0400(0,
 							LMS7002_OPT_CAPSEL_RSSI, //CAPSEL
 							LMS7002_OPT_CAPSEL_ADC_RXTSP_INPUT, //CAPSEL_ADC
@@ -1590,6 +1674,29 @@ int lms7_rxtsp_dc_corr(struct lms7_state* st, unsigned wnd)
 	return lms7_spi_post(st, REG_COUNT(regs), regs);
 }
 
+int lms7_rxtsp_iq_gcorr(struct lms7_state* st, unsigned ig, unsigned qg)
+{
+	st->rxtsp.reg_0x0c = st->rxtsp.reg_0x0c & (~(1u << LMS7002_RXTSP_GC_BYP_OFF));
+
+	uint32_t regs[] = {
+		MAKE_LMS7002_0x0401(qg),
+		MAKE_LMS7002_0x0402(ig),
+		MAKE_WR_REG(LMS7002M_0x040C, st->rxtsp.reg_0x0c),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
+int lms7_rxtsp_iq_phcorr(struct lms7_state* st, int acorr)
+{
+	st->rxtsp.reg_0x0c = st->rxtsp.reg_0x0c & (~(1u << LMS7002_RXTSP_PH_BYP_OFF));
+	st->rxtsp.reg_0x03 = (st->rxtsp.reg_0x03 & ~LMS7002_RXTSP_IQCORR_MSK) | (acorr & LMS7002_RXTSP_IQCORR_MSK);
+
+	uint32_t regs[] = {
+		MAKE_WR_REG(LMS7002M_0x0403, st->rxtsp.reg_0x03),
+		MAKE_WR_REG(LMS7002M_0x040C, st->rxtsp.reg_0x0c),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
 
 /************************************************************************
  * TxTSP configuration
@@ -1612,10 +1719,11 @@ int lms7_txtsp_disable(struct lms7_state* st)
 int lms7_txtsp_init(struct lms7_state* st, unsigned interp_ord)
 {
 	st->txtsp.reg_0x0c = (uint16_t)MAKE_LMS7002_0x0208(0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+	st->txtsp.reg_0x03 = (uint16_t)MAKE_LMS7002_0x0203( (unsigned)(interp_ord - 1), 0);
 
 	uint32_t regs[] = {
 		MAKE_WR_REG(LMS7002M_0x0208, st->txtsp.reg_0x0c),
-		MAKE_LMS7002_0x0203( (unsigned)(interp_ord - 1), 0),
+		MAKE_WR_REG(LMS7002M_0x0203, st->txtsp.reg_0x03),
 		MAKE_LMS7002_0x0200(LMS7002_OPT_TSGFC_NEG6DB, //TSGFC,
 							LMS7002_OPT_TSGFCW_DIV4, //TSGFCW,
 							0, //TSGDCLDQ
@@ -1700,6 +1808,30 @@ int lms7_txtsp_tsg_tone(struct lms7_state* st, bool fs, bool div4)
 	return lms7_spi_post(st, REG_COUNT(regs), regs);
 }
 
+int lms7_txtsp_iq_gcorr(struct lms7_state* st, unsigned ig, unsigned qg)
+{
+	st->txtsp.reg_0x0c = st->txtsp.reg_0x0c & (~(1u << LMS7002_TXTSP_GC_BYP_OFF));
+
+	uint32_t regs[] = {
+		MAKE_LMS7002_0x0201(qg),
+		MAKE_LMS7002_0x0202(ig),
+		MAKE_WR_REG(LMS7002M_0x0208, st->txtsp.reg_0x0c),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
+int lms7_txtsp_iq_phcorr(struct lms7_state* st, int acorr)
+{
+	st->txtsp.reg_0x0c = st->txtsp.reg_0x0c & (~(1u << LMS7002_TXTSP_PH_BYP_OFF));
+	st->txtsp.reg_0x03 = (st->txtsp.reg_0x03 & ~LMS7002_TXTSP_IQCORR_MSK) | (acorr & LMS7002_TXTSP_IQCORR_MSK);
+
+	uint32_t regs[] = {
+		MAKE_WR_REG(LMS7002M_0x0203, st->rxtsp.reg_0x03),
+		MAKE_WR_REG(LMS7002M_0x0208, st->rxtsp.reg_0x0c),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
 /************************************************************************
  * DC configuration
  ************************************************************************/
@@ -1720,6 +1852,50 @@ int lms7_dc_init(struct lms7_state* st,
 		MAKE_LMS7002_0x05C2(0, 0, 0, 0, 0, 0, 0, 0,
 							0, 0, 0, 0, 0, 0, 0, 0),
 		MAKE_LMS7002_0x05CB(255, 255),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
+int lms7_dc_rxa_set(struct lms7_state* st, int16_t i, int16_t q)
+{
+	uint32_t regs[] = {
+		MAKE_WR_REG(LMS7002M_0x05C7, i & 0x7f),
+		MAKE_WR_REG(LMS7002M_0x05C7, (i & 0x7f) | 0x8000),
+		MAKE_WR_REG(LMS7002M_0x05C8, q & 0x7f),
+		MAKE_WR_REG(LMS7002M_0x05C8, (q & 0x7f) | 0x8000),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
+int lms7_dc_rxb_set(struct lms7_state* st, int16_t i, int16_t q)
+{
+	uint32_t regs[] = {
+		MAKE_WR_REG(LMS7002M_0x05C9, i & 0x7f),
+		MAKE_WR_REG(LMS7002M_0x05C9, (i & 0x7f) | 0x8000),
+		MAKE_WR_REG(LMS7002M_0x05CA, q & 0x7f),
+		MAKE_WR_REG(LMS7002M_0x05CA, (q & 0x7f) | 0x8000),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
+int lms7_dc_txa_set(struct lms7_state* st, int16_t i, int16_t q)
+{
+	uint32_t regs[] = {
+		MAKE_WR_REG(LMS7002M_0x05C3, i & 0x7ff),
+		MAKE_WR_REG(LMS7002M_0x05C3, (i & 0x7ff) | 0x8000),
+		MAKE_WR_REG(LMS7002M_0x05C4, q & 0x7ff),
+		MAKE_WR_REG(LMS7002M_0x05C4, (q & 0x7ff) | 0x8000),
+	};
+	return lms7_spi_post(st, REG_COUNT(regs), regs);
+}
+
+int lms7_dc_txb_set(struct lms7_state* st, int16_t i, int16_t q)
+{
+	uint32_t regs[] = {
+		MAKE_WR_REG(LMS7002M_0x05C5, i & 0x7ff),
+		MAKE_WR_REG(LMS7002M_0x05C5, (i & 0x7ff) | 0x8000),
+		MAKE_WR_REG(LMS7002M_0x05C6, q & 0x7ff),
+		MAKE_WR_REG(LMS7002M_0x05C6, (q & 0x7ff) | 0x8000),
 	};
 	return lms7_spi_post(st, REG_COUNT(regs), regs);
 }
