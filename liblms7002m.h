@@ -381,6 +381,8 @@ struct lms7_state {
 	int c_ctl_lpfl_rbb;
 	int rcc_ctl_lpfh_rbb;	// 0x0116
 	int c_ctl_lpfh_rbb;		// 0x0116
+	bool rxbw_calibrated[2];
+	bool txbw_calibrated[2];
 
 	double cgen_freq;		// last written CGEN frequency in Hz
 
@@ -496,7 +498,7 @@ enum rbb_path {
 int lms7_rbb_disable(struct lms7_state* st);
 int lms7_rbb_set_path(struct lms7_state* st, enum rbb_path path);
 int lms7_rbb_set_pga(struct lms7_state* st, unsigned gain);
-int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw);
+int lms7_rbb_set_bandwidth(struct lms7_state* st, enum lms7_mac_mode mode, unsigned bw);
 int lms7_rbb_set_ext(struct lms7_state* st);
 
 // AFE functions
@@ -543,7 +545,7 @@ enum tbb_path {
 
 int lms7_tbb_disable(struct lms7_state* st);
 int lms7_tbb_set_path(struct lms7_state* st, enum tbb_path path);
-int lms7_tbb_set_bandwidth(struct lms7_state* st, unsigned bw);
+int lms7_tbb_set_bandwidth(struct lms7_state* st, enum lms7_mac_mode mode, unsigned bw);
 
 // TRF
 int lms7_trf_disable(struct lms7_state* st);
@@ -610,8 +612,8 @@ uint16_t lms7_get_spi_reg_bits(struct lms7_state *st,uint16_t addr,uint8_t bits)
 void lms7_store_register(struct lms7_state *st);
 void lms7_restore_register(struct lms7_state *st);
 int lms7_tbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double bw);
-void lms7_tbb_apply_calibration(struct lms7_state *st,int path);
+void lms7_tbb_apply_calibration(struct lms7_state *st, enum lms7_mac_mode mode,int path);
 int lms7_rbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double bw);
-void lms7_rbb_apply_calibration(struct lms7_state *st,int path);
+void lms7_rbb_apply_calibration(struct lms7_state *st, enum lms7_mac_mode mode,int path);
 
 #endif //LIBLMS7002MC_H
