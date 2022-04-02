@@ -138,6 +138,10 @@ int lms7_enable(struct lms7_state* st)
 	st->reg_0x0124[1] = 0;
 	st->cbst[0].rfe_tia_g = 3;
 	st->cbst[1].rfe_tia_g = 3;
+	st->rxbw_calibrated[0] = false;
+	st->rxbw_calibrated[1] = false;
+	st->txbw_calibrated[0] = false;
+	st->txbw_calibrated[1] = false;
 	return 0;
 }
 
@@ -1196,7 +1200,6 @@ static int lms7_tbb_set_bandwidth_lad(struct lms7_state* st, unsigned bw)
 	else if (rcal_lpflad_tbb > 255)
 		rcal_lpflad_tbb = 255;
 
-
 	uint32_t regs[] = {
 		MAKE_LMS7002_0x0109(0, rcal_lpflad_tbb)
 	};
@@ -1223,61 +1226,64 @@ int lms7_tbb_set_bandwidth_lpfh(struct lms7_state* st, unsigned bw)
 	else if (rcal_lpfh_tbb > 255)
 		rcal_lpfh_tbb = 255;
 
-
 	uint32_t regs[] = {
 		MAKE_LMS7002_0x0109(rcal_lpfh_tbb, 0)
 	};
 	return lms7_spi_post(st, REG_COUNT(regs), regs);
 }
 
-int lms7_tbb_set_bandwidth(struct lms7_state* st, unsigned bw)
+int lms7_tbb_set_bandwidth(struct lms7_state* st, enum lms7_mac_mode mode, unsigned bw)
 {
 	int res = 0;
 	unsigned cg_iamp_tbb;
-	if (bw < 20000000) {
-		if(st->rcal_lpflad_tbb < 0)	{ /* calibartion failed */
-			lms7_log(st,"TBB: Calibration was failed Apply default method");
-			cg_iamp_tbb = (bw + 10000000) / 2000000;
+	
+	if(st->txbw_calibrated[(mode == LMS7_CH_A) ? 0 : 1] == false)
+	{
+		if(bw < 20000000)
+		{
+	//		cg_iamp_tbb = (bw + 1000000) / 2000000;
+			cg_iamp_tbb = (bw / 1000000) * 2;
 			res = lms7_tbb_set_path(st,TBB_LAD);
 			if(res)
 				return(res);
 
 			res = lms7_tbb_set_bandwidth_lad(st,bw);
-		} else {
-			lms7_tbb_apply_calibration(st,TBB_LAD);
-			return(0);
-		}
-	} else {
-		if(st->rcal_lpfh_tbb < 0)	/* calibartion failed */
+		} 
+		else
 		{
-			lms7_log(st,"TBB: Calibration was failed Apply default method");
 			cg_iamp_tbb = (bw + 500000) / 1000000;
 			res = lms7_tbb_set_path(st,TBB_HBF);
 			if(res)
 				return res;
 
 			res = lms7_tbb_set_bandwidth_lpfh(st, bw);
-		} else {
-			lms7_tbb_apply_calibration(st,TBB_HBF);
-			return(0);
 		}
+
+		if (res)
+			return res;
+
+		if (cg_iamp_tbb < 1)
+			cg_iamp_tbb = 1;
+		else if (cg_iamp_tbb > 63)
+			cg_iamp_tbb = 63;
+
+		uint32_t regs[] = {
+			MAKE_LMS7002_0x0108(
+				cg_iamp_tbb, //CG_IAMP_TBB,
+				12, //ICT_IAMP_FRP_TBB,
+				12  //ICT_IAMP_GG_FRP_TBB
+			),
+		};
+
+		res = lms7_spi_post(st, REG_COUNT(regs), regs);
 	}
-	if (res)
-		return res;
 
-	if (cg_iamp_tbb < 1)
-		cg_iamp_tbb = 1;
-	if (cg_iamp_tbb > 63)
-		cg_iamp_tbb = 63;
+	if (bw < 20000000)
+		lms7_tbb_apply_calibration(st,mode,TBB_LAD);
+	else
+		lms7_tbb_apply_calibration(st,mode,TBB_HBF);
 
-	uint32_t regs[] = {
-		MAKE_LMS7002_0x0108(
-			cg_iamp_tbb, //CG_IAMP_TBB,
-			12, //ICT_IAMP_FRP_TBB,
-			12  //ICT_IAMP_GG_FRP_TBB
-		),
-	};
-	return lms7_spi_post(st, REG_COUNT(regs), regs);
+	return(res);
 }
 
 /************************************************************************
@@ -1388,13 +1394,12 @@ static int lms7_rbb_set_lpfx_bandwidth(struct lms7_state* st, unsigned bw)
 	return lms7_rbb_set_path(st, path);
 }
 
-int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw)
+int lms7_rbb_set_bandwidth(struct lms7_state* st, enum lms7_mac_mode mode, unsigned bw)
 {
-	int res;
+	int res = 0;
 	int path = (bw < 20e6) ? RBB_LBF : RBB_HBF;
 
-	if((st->c_ctl_lpfh_rbb < 0)
-		|| (st->c_ctl_lpfl_rbb < 0))
+	if(st->txbw_calibrated[(mode == LMS7_CH_A) ? 0 : 1] == false)
 	{
 		lms7_log(st,"RBB: Calibration was failed Apply default method");
 		if (bw < 100000)
@@ -1430,11 +1435,13 @@ int lms7_rbb_set_bandwidth(struct lms7_state* st, unsigned bw)
 		if (res)
 			return res;
 
-		return lms7_rbb_set_lpfx_bandwidth(st, bw);
+		res = lms7_rbb_set_lpfx_bandwidth(st, bw);
 	}
 
-	lms7_rbb_apply_calibration(st,path);
-	return 0;
+	if (res == 0)
+		lms7_rbb_apply_calibration(st,mode,path);
+
+	return res;
 }
 
 int lms7_rbb_set_pga(struct lms7_state* st, unsigned gain)
@@ -2262,6 +2269,7 @@ uint16_t lms7regs_address[LMS7002M_IDX_COUNT] =
 	LMS7002M_0x05CC,
 };
 
+#ifdef UNUSED
 uint16_t lms7_get_spi_bits(struct lms7_state *st,uint16_t addr,uint8_t msb,uint8_t lsb)
 {
 	int res;
@@ -2291,6 +2299,7 @@ int lms7_set_spi_modify_bits(struct lms7_state *st,uint16_t addr,uint8_t msb,uin
 
 	return(lms7_spi_post(st,1,&data));	// write modified data back to SPI reg
 }
+#endif
 
 int lms7_modify_spi_reg_bits(struct lms7_state *st,uint16_t addr,uint8_t bits,uint16_t new_bits_data)
 {
@@ -2592,8 +2601,8 @@ static int tx_cal_init(struct lms7_state *st,enum lms7_mac_mode mode)
 	lms7_modify_spi_reg_bits(st,GFIR1_BYP_RXTSP,1);
 	lms7_modify_spi_reg_bits(st,CMIX_GAIN_RXTSP,1);
 
-	st->txtsp.reg_0x0c = lms7_spi_read(st,0x208);
-	st->rxtsp.reg_0x0c = lms7_spi_read(st,0x40C);
+	st->txtsp.reg_0x0c = lms7_spi_read(st,LMS7002M_0x0208);
+	st->rxtsp.reg_0x0c = lms7_spi_read(st,LMS7002M_0x040C);
 
 	//--- initial cal tone ---//
 	setup_tx_cal_tone(st,mode,50e3);
@@ -2788,6 +2797,7 @@ static int tx_cal_loop(struct lms7_state *st,enum lms7_mac_mode mode,double bw,i
 		adjust = (rssi_value < (rssi_value_50k * 0.7071)) ?- 1 : +1;
 	}
 
+	st->txbw_calibrated[(mode == LMS7_CH_A) ? 0 : 1] = true;
 	lms7_log(st,"%s = %d",reg_name,*reg_ptr);
 	lms7_log(st,"ccal_lpflad_tbb = %d",st->ccal_lpflad_tbb);
 	lms7_log(st,"cg_iamp_tbb = %d",st->cg_iamp_tbb);
@@ -2862,6 +2872,7 @@ static int rx_cal_loop(struct lms7_state *st,enum lms7_mac_mode mode,double bw,i
 
 	}
 
+	st->rxbw_calibrated[(mode == LMS7_CH_A) ? 0 : 1] = true;
 	lms7_log(st,"%s = %d",reg_name,*reg_ptr);
 	return(0);
 }
@@ -3087,7 +3098,7 @@ static int rx_cal_rbb_lpfh(struct lms7_state *st,enum lms7_mac_mode mode,double 
 /* Tx calibration dispatcher */
 int lms7_tbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double bw)
 {
-	int res;
+	int res = 0;
 
 	// Save register map
 	lms7_store_register(st);
@@ -3097,9 +3108,15 @@ int lms7_tbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double 
 
 	// Clocking configuration
 	res = lms7_cgen_tune_sync(st,st->cgen_freq,st->txdiv);
+	if(res != 0)
+	{
+		lms7_log(st,"lms7_cgen_tune_sync failed %d",res);
+		goto done;
+	}
+
 	// Load initial calibration state
 	res = tx_cal_init(st,mode);
-	if(res)
+	if(res != 0)
 	{
 		lms7_log(st,"tx_cal_init failed %d",res);
 		goto done;
@@ -3127,32 +3144,37 @@ int lms7_tbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double 
 	lms7_mac_set(st,mode);
 
 	// apply tbb calibration results
-	lms7_tbb_apply_calibration(st,path);
+	if(res == 0)
+		lms7_tbb_apply_calibration(st,mode,path);
 	return(0);
 }
 
-void lms7_tbb_apply_calibration(struct lms7_state *st,int path)
+void lms7_tbb_apply_calibration(struct lms7_state *st,enum lms7_mac_mode mode,int path)
 {
-	// set the filter selection
-	lms7_tbb_set_path(st,path);
-	// apply tbb calibration results
-	lms7_modify_spi_reg_bits(st,ICT_IAMP_FRP_TBB,1);
-	lms7_modify_spi_reg_bits(st,ICT_IAMP_GG_FRP_TBB,6);
+	if(st->txbw_calibrated[(mode == LMS7_CH_A) ? 0 : 1] == true)
+	{
+		// set the filter selection
+		lms7_tbb_set_path(st,path);
+		// apply tbb calibration results
+		lms7_modify_spi_reg_bits(st,CG_IAMP_TBB,st->cg_iamp_tbb);
+		lms7_modify_spi_reg_bits(st,ICT_IAMP_FRP_TBB,1);
+		lms7_modify_spi_reg_bits(st,ICT_IAMP_GG_FRP_TBB,6);
 
-	lms7_modify_spi_reg_bits(st,RCAL_LPFLAD_TBB,st->rcal_lpflad_tbb);
-	lms7_modify_spi_reg_bits(st,RCAL_LPFH_TBB,st->rcal_lpfh_tbb);
+		lms7_modify_spi_reg_bits(st,RCAL_LPFLAD_TBB,st->rcal_lpflad_tbb);
+		lms7_modify_spi_reg_bits(st,RCAL_LPFH_TBB,st->rcal_lpfh_tbb);
 
-	lms7_modify_spi_reg_bits(st,CCAL_LPFLAD_TBB,st->ccal_lpflad_tbb);
-	lms7_modify_spi_reg_bits(st,RCAL_LPFS5_TBB,st->rcal_lpfs5_tbb);
-
-	lms7_log(st,"TBB: ccal_lpflad_tbb = %d",st->ccal_lpflad_tbb);
-	lms7_log(st,"TBB: cg_iamp_tbb = %d",st->cg_iamp_tbb);
-	lms7_log(st,"TBB: g_pga_rbb = %d",st->g_pga_rbb);
+		lms7_modify_spi_reg_bits(st,CCAL_LPFLAD_TBB,st->ccal_lpflad_tbb);
+//		lms7_modify_spi_reg_bits(st,RCAL_LPFS5_TBB,st->rcal_lpfs5_tbb);
+	}
+	
+	lms7_log(st,"TBB: ccal_lpflad_tbb = %d",lms7_get_spi_reg_bits(st,CCAL_LPFLAD_TBB));
+	lms7_log(st,"TBB: cg_iamp_tbb = %d",lms7_get_spi_reg_bits(st,CG_IAMP_TBB));
+	lms7_log(st,"TBB: g_pga_rbb = %d",lms7_get_spi_reg_bits(st,G_PGA_RBB));
 	if(path == TBB_LAD)
-		lms7_log(st,"TBB: rcal_lpflad_tbb = %d",st->rcal_lpflad_tbb);
+		lms7_log(st,"TBB: rcal_lpflad_tbb = %d",lms7_get_spi_reg_bits(st,RCAL_LPFLAD_TBB));
 
 	if(path == TBB_HBF)
-		lms7_log(st,"TBB: rcal_lpfh_tbb = %d",st->rcal_lpfh_tbb);
+		lms7_log(st,"TBB: rcal_lpfh_tbb = %d",lms7_get_spi_reg_bits(st,RCAL_LPFH_TBB));
 }
 
 /* Rx calibration dispatcher */
@@ -3211,40 +3233,43 @@ int lms7_rbb_set_filter_bw(struct lms7_state *st,enum lms7_mac_mode mode,double 
 	lms7_restore_register(st);
 	lms7_mac_set(st,mode);
 
-	lms7_rbb_apply_calibration(st,path);
+	lms7_rbb_apply_calibration(st,mode,path);
 	return(0);
 }
 
-void lms7_rbb_apply_calibration(struct lms7_state *st,int path)
+void lms7_rbb_apply_calibration(struct lms7_state *st,enum lms7_mac_mode mode,int path)
 {
-	// set the filter selection
-	lms7_rbb_set_path(st,path);
-	// apply tia calibration results
-	lms7_modify_spi_reg_bits(st,ICT_TIAMAIN_RFE,2);
-	lms7_modify_spi_reg_bits(st,ICT_TIAOUT_RFE,2);
-	lms7_modify_spi_reg_bits(st,RFB_TIA_RFE,16);
+	if(st->rxbw_calibrated[(mode == LMS7_CH_A) ? 0 : 1] == true)
+	{
+		// set the filter selection
+		lms7_rbb_set_path(st,path);
+		// apply tia calibration results
+		lms7_modify_spi_reg_bits(st,ICT_TIAMAIN_RFE,2);
+		lms7_modify_spi_reg_bits(st,ICT_TIAOUT_RFE,2);
+		lms7_modify_spi_reg_bits(st,RFB_TIA_RFE,16);
 
-	lms7_modify_spi_reg_bits(st,CFB_TIA_RFE,st->cfb_tia_rfe);
-	lms7_modify_spi_reg_bits(st,CCOMP_TIA_RFE,st->ccomp_tia_rfe);
-	lms7_modify_spi_reg_bits(st,RCOMP_TIA_RFE,st->rcomp_tia_rfe);
+		lms7_modify_spi_reg_bits(st,CFB_TIA_RFE,st->cfb_tia_rfe);
+		lms7_modify_spi_reg_bits(st,CCOMP_TIA_RFE,st->ccomp_tia_rfe);
+		lms7_modify_spi_reg_bits(st,RCOMP_TIA_RFE,st->rcomp_tia_rfe);
 
-	// apply rbb calibration results
-	lms7_modify_spi_reg_bits(st,RCC_CTL_LPFL_RBB,st->rcc_ctl_lpfl_rbb);
-	lms7_modify_spi_reg_bits(st,C_CTL_LPFL_RBB,st->c_ctl_lpfl_rbb);
-	lms7_modify_spi_reg_bits(st,RCC_CTL_LPFH_RBB,st->rcc_ctl_lpfh_rbb);
-	lms7_modify_spi_reg_bits(st,C_CTL_LPFH_RBB,st->c_ctl_lpfh_rbb);
+		// apply rbb calibration results
+		lms7_modify_spi_reg_bits(st,RCC_CTL_LPFL_RBB,st->rcc_ctl_lpfl_rbb);
+		lms7_modify_spi_reg_bits(st,C_CTL_LPFL_RBB,st->c_ctl_lpfl_rbb);
+		lms7_modify_spi_reg_bits(st,RCC_CTL_LPFH_RBB,st->rcc_ctl_lpfh_rbb);
+		lms7_modify_spi_reg_bits(st,C_CTL_LPFH_RBB,st->c_ctl_lpfh_rbb);
 
-	lms7_modify_spi_reg_bits(st,ICT_PGA_OUT_RBB,20);
-	lms7_modify_spi_reg_bits(st,ICT_PGA_IN_RBB,20);
-	lms7_modify_spi_reg_bits(st,R_CTL_LPF_RBB,16);
+		lms7_modify_spi_reg_bits(st,ICT_PGA_OUT_RBB,20);
+		lms7_modify_spi_reg_bits(st,ICT_PGA_IN_RBB,20);
+		lms7_modify_spi_reg_bits(st,R_CTL_LPF_RBB,16);
+	}
+	
+	lms7_log(st,"RBB: rcc_ctl_lpfh_rbb = %d",lms7_get_spi_reg_bits(st,RCC_CTL_LPFH_RBB));
+	lms7_log(st,"RBB: rcc_ctl_lpfl_rbb = %d",lms7_get_spi_reg_bits(st,RCC_CTL_LPFL_RBB));
+	lms7_log(st,"RBB: c_ctl_lpfh_rbb = %d",lms7_get_spi_reg_bits(st,C_CTL_LPFH_RBB));
+	lms7_log(st,"RBB: c_ctl_lpfl_rbb = %d",lms7_get_spi_reg_bits(st,C_CTL_LPFL_RBB));
 
-	lms7_log(st,"RBB: rcc_ctl_lpfh_rbb = %d",st->rcc_ctl_lpfh_rbb);
-	lms7_log(st,"RBB: rcc_ctl_lpfl_rbb = %d",st->rcc_ctl_lpfl_rbb);
-	lms7_log(st,"RBB: c_ctl_lpfh_rbb = %d",st->c_ctl_lpfh_rbb);
-	lms7_log(st,"RBB: c_ctl_lpfl_rbb = %d",st->c_ctl_lpfl_rbb);
-
-	lms7_log(st,"RBB: ccomp_tia_rfe = %d",st->ccomp_tia_rfe);
-	lms7_log(st,"RBB: cfb_tia_rfe = %d",st->cfb_tia_rfe);
-	lms7_log(st,"RBB: rcomp_tia_rfe = %d",st->rcomp_tia_rfe);
+	lms7_log(st,"RBB: ccomp_tia_rfe = %d",lms7_get_spi_reg_bits(st,CCOMP_TIA_RFE));
+	lms7_log(st,"RBB: cfb_tia_rfe = %d",lms7_get_spi_reg_bits(st,CFB_TIA_RFE));
+	lms7_log(st,"RBB: rcomp_tia_rfe = %d",lms7_get_spi_reg_bits(st,RCOMP_TIA_RFE));
 }
 
